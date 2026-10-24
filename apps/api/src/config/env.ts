@@ -1,6 +1,12 @@
 import { z } from 'zod';
 
 /**
+ * True when running as a Vercel Function. There is no long-lived process there: nothing may rely
+ * on timers or background workers, and periodic work is driven by Vercel Cron (GET /internal/cron).
+ */
+export const isServerless = !!process.env.VERCEL;
+
+/**
  * Environment is parsed once at boot. A missing or malformed variable fails fast with a clear
  * message instead of surfacing later as a confusing runtime error.
  */
@@ -43,7 +49,9 @@ const envSchema = z.object({
   /** Port of the web app for links in emails when the site runs on a local host (development only). */
   DEV_WEB_PORT: z.coerce.number().int().default(3000),
   /** Run queue workers in this process. Set false on web-facing API nodes if you run `node dist/worker.js` separately. */
-  RUN_WORKERS: z.enum(['true', 'false']).default('true'),
+  RUN_WORKERS: z.enum(['true', 'false']).default(isServerless ? 'false' : 'true'),
+  /** Vercel Cron sends "Authorization: Bearer <CRON_SECRET>" to /internal/cron. Unset = that endpoint is disabled. */
+  CRON_SECRET: z.string().min(16, 'CRON_SECRET must be at least 16 characters').optional(),
   /** Hostname agencies point a CNAME at (e.g. sites.estatery.app). Required for custom domains in production. */
   DOMAIN_CNAME_TARGET: z.string().default('sites.estatery.local'),
   /** IPv4 addresses for apex domains that can't use a CNAME (comma-separated). */

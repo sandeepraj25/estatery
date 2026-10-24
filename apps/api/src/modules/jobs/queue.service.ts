@@ -2,7 +2,8 @@ import { reportError } from '../../common/monitoring.js';
 import { Injectable, Logger, type OnApplicationShutdown, type OnModuleInit } from '@nestjs/common';
 import { Queue, Worker, type JobsOptions } from 'bullmq';
 import { Redis } from 'ioredis';
-import { loadEnv } from '../../config/env.js';
+import { waitUntil } from '@vercel/functions';
+import { isServerless, loadEnv } from '../../config/env.js';
 
 export type JobHandler = (data: any) => Promise<void>;
 
@@ -22,6 +23,9 @@ const DEFAULTS: JobsOptions = {
  * interval across all instances.
  * Without REDIS_URL: jobs run in this process right after the request, with a few retries.
  * Fine for development and single-server installs; nothing is persisted across restarts.
+ * On Vercel (serverless): always inline. There is no process to run a BullMQ worker, so in-process
+ * jobs are kept alive past the response with waitUntil, and repeatable jobs are run by Vercel Cron
+ * through runRepeatables().
  */
 @Injectable()
 export class QueueService implements OnModuleInit, OnApplicationShutdown {
@@ -36,7 +40,7 @@ export class QueueService implements OnModuleInit, OnApplicationShutdown {
   private readonly repeatables: Array<{ name: string; everyMs: number }> = [];
 
   get mode() {
-    return this.env.REDIS_URL ? 'bullmq' : 'inline';
+    return this.env.REDIS_URL && !isServerless ? 'bullmq' : 'inline';
   }
 
   register(name: string, handler: JobHandler) {
@@ -44,7 +48,7 @@ export class QueueService implements OnModuleInit, OnApplicationShutdown {
   }
 
   async onModuleInit() {
-    if (!this.env.REDIS_URL) return;
+    if (!this.env.REDIS_URL || isServerless) return;
     this.connection = new Redis(this.env.REDIS_URL, { maxRetriesPerRequest: null });
     this.queue = new Queue(QUEUE, { connection: this.connection, defaultJobOptions: DEFAULTS });
   }
@@ -105,6 +109,28 @@ export class QueueService implements OnModuleInit, OnApplicationShutdown {
     })();
     this.pending.add(run);
     void run.finally(() => this.pending.delete(run));
+    // A serverless function may be frozen once the response is sent; keep it alive until the job ends.
+    if (isServerless) waitUntil(run);
+  }
+
+  /**
+   * Runs every repeatable job once, now, and waits for it. Used by the Vercel Cron endpoint, which
+   * replaces the interval timers / BullMQ schedulers that a serverless function cannot keep.
+   */
+  async runRepeatables() {
+    const results: Record<string, 'ok' | 'failed'> = {};
+    for (const r of this.repeatables) {
+      const handler = this.handlers.get(r.name);
+      if (!handler) continue;
+      try {
+        await handler({});
+        results[r.name] = 'ok';
+      } catch (e) {
+        results[r.name] = 'failed';
+        reportError(e, { job: r.name });
+      }
+    }
+    return results;
   }
 
   /** Waits for in-process jobs to finish (tests, graceful shutdown). */

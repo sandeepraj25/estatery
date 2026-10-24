@@ -8,7 +8,7 @@ import { AppModule } from './app.module.js';
 import { HttpExceptionFilter } from './common/http-exception.filter.js';
 import { initMonitoring } from './common/monitoring.js';
 import { randomUUID } from 'node:crypto';
-import { loadEnv } from './config/env.js';
+import { isServerless, loadEnv } from './config/env.js';
 
 /** Shared by main.ts and the e2e tests so tests exercise the real middleware stack. */
 export async function createApp() {
@@ -18,6 +18,9 @@ export async function createApp() {
     logger: env.NODE_ENV === 'test' ? ['error'] : ['log', 'warn', 'error'],
     // Keeps req.rawBody so webhook signatures are checked against the exact bytes received.
     rawBody: true,
+    // Serverless: a failed start must throw (the handler answers 503 and retries on the next
+    // request) instead of exiting the process, which Vercel reports as FUNCTION_INVOCATION_FAILED.
+    abortOnError: !isServerless,
   });
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
