@@ -7,6 +7,7 @@ import { Redis } from 'ioredis';
 import { RedisThrottlerStorage } from './common/redis-throttler.storage.js';
 import { isServerless, loadEnv } from './config/env.js';
 import { safeEqualStr } from './modules/auth/tokens.service.js';
+import { SetupController } from './common/setup.controller.js';
 import { DomainRecheckService } from './modules/domains/domain-recheck.service.js';
 import { AdminModule } from './modules/admin/admin.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
@@ -101,7 +102,7 @@ class CronController {
     BillingModule,
     RedirectsModule,
   ],
-  controllers: [HealthController, CronController],
+  controllers: [HealthController, CronController, SetupController],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
