@@ -1,0 +1,9 @@
+{
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "files.exclude": { "**/.next": true, "**/.next-prod": true, "**/*.tsbuildinfo": true },
+  "search.exclude": { "**/node_modules": true, "**/dist": true, "**/.next": true, "**/.next-prod": true, "pnpm-lock.yaml": true },
+  "tailwindCSS.experimental.configFile": "apps/web/src/app/globals.css",
+  "tailwindCSS.classFunctions": ["cn"],
+  "vitest.rootConfig": "apps/api/vitest.config.ts"
+}

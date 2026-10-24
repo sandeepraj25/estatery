@@ -1,0 +1,40 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start databases (Docker)",
+      "type": "shell",
+      "command": "docker compose up -d",
+      "problemMatcher": []
+    },
+    {
+      "label": "Build shared package",
+      "type": "shell",
+      "command": "pnpm --filter @estatery/shared build",
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "Seed demo data",
+      "type": "shell",
+      "command": "pnpm seed",
+      "dependsOn": "Build shared package",
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev: API + website",
+      "type": "shell",
+      "command": "pnpm dev",
+      "dependsOn": "Build shared package",
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "Run API tests",
+      "type": "shell",
+      "command": "pnpm test",
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}

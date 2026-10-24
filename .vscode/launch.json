@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug API",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/apps/api",
+      "preLaunchTask": "Build shared package",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["exec", "sh", "-c", "tsc -p tsconfig.build.json && node --env-file-if-exists=.env --enable-source-maps dist/main.js"],
+      "windows": { "runtimeArgs": ["exec", "cmd", "/c", "tsc -p tsconfig.build.json && node --env-file-if-exists=.env --enable-source-maps dist/main.js"] },
+      "autoAttachChildProcesses": true,
+      "sourceMaps": true,
+      "outFiles": ["${workspaceFolder}/apps/api/dist/**/*.js"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug website (Next.js server)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/apps/web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["exec", "next", "dev", "-p", "3000"],
+      "env": { "NODE_OPTIONS": "--inspect" },
+      "autoAttachChildProcesses": true,
+      "console": "integratedTerminal",
+      "serverReadyAction": { "pattern": "Local:\\s+(https?://\\S+)", "uriFormat": "%s/admin", "action": "openExternally" }
+    },
+    {
+      "name": "Debug website (browser)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/apps/web"
+    }
+  ],
+  "compounds": [
+    { "name": "Debug API + website", "configurations": ["Debug API", "Debug website (Next.js server)"], "stopAll": true }
+  ]
+}

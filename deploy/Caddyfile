@@ -1,0 +1,42 @@
+# Production edge for Estatery: one Caddy in front of the Next.js web server.
+#
+# - Platform subdomains (*.estatery.app) use a wildcard certificate (DNS challenge).
+# - Agency custom domains get certificates on demand, but ONLY after the API confirms the
+#   hostname is a verified domain of an active agency (the "ask" endpoint). This stops anyone
+#   from making the server request certificates for arbitrary hostnames.
+# Replace estatery.app, the Cloudflare DNS plugin and the token with your own values.
+
+{
+	email ops@estatery.app
+	on_demand_tls {
+		ask http://api:4000/internal/tls/ask?token={env.TLS_ASK_TOKEN}
+	}
+}
+
+(app) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+	# The web server forwards the visitor's host to the API itself; the API is never public.
+	reverse_proxy web:3000 {
+		header_up X-Forwarded-Host {host}
+	}
+}
+
+# Wildcard for platform subdomains (requires a DNS provider module, e.g. caddy-dns/cloudflare).
+*.estatery.app, estatery.app {
+	tls {
+		dns cloudflare {env.CLOUDFLARE_DNS_API_TOKEN}
+	}
+	import app
+}
+
+# Every other hostname: a verified agency custom domain.
+https:// {
+	tls {
+		on_demand
+	}
+	import app
+}

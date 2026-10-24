@@ -1,0 +1,12 @@
+{
+  "name": "estatery",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter ./apps/* dev",
+    "build": "pnpm --filter @estatery/shared build && pnpm --filter @estatery/api build && pnpm --filter @estatery/web build",
+    "test": "pnpm --filter @estatery/api test",
+    "seed": "pnpm --filter @estatery/api seed",
+    "typecheck": "pnpm -r typecheck"
+  }
+}
