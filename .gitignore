@@ -10,3 +10,4 @@ coverage
 .next-prod
 *.tsbuildinfo
 state.json
+.vercel

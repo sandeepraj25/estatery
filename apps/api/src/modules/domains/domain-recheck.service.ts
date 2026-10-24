@@ -1,7 +1,7 @@
 import { Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
-import { loadEnv } from '../../config/env.js';
+import { isServerless, loadEnv } from '../../config/env.js';
 import type { DomainDoc } from '../tenants/tenant.schemas.js';
 import { DomainsService } from './domains.service.js';
 
@@ -25,7 +25,8 @@ export class DomainRecheckService implements OnApplicationBootstrap, OnApplicati
   ) {}
 
   onApplicationBootstrap() {
-    if (this.env.DOMAIN_RECHECK_MINUTES === 0 || this.env.NODE_ENV === 'test') return;
+    // Serverless: no timers; Vercel Cron calls tick() through /internal/cron instead.
+    if (this.env.DOMAIN_RECHECK_MINUTES === 0 || this.env.NODE_ENV === 'test' || isServerless) return;
     this.timer = setInterval(() => void this.tick(), 5 * 60_000);
     this.timer.unref();
   }
